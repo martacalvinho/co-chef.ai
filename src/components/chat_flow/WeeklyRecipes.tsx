@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookOpen, Clock, Users, ArrowLeft, Star } from 'lucide-react';
 import { WeekData } from './types';
+import { MealRatingModal } from '../modals/GlobalModals';
 
 interface WeeklyRecipesProps {
   weekData: WeekData;
@@ -21,6 +22,29 @@ export const WeeklyRecipes: React.FC<WeeklyRecipesProps> = ({
   onSetViewingRecipe,
   onRecipeConfirm
 }) => {
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [currentMealIndex, setCurrentMealIndex] = useState<number | null>(null);
+
+  const handleMarkComplete = (mealIndex: number) => {
+    setCurrentMealIndex(mealIndex);
+    setRatingModalOpen(true);
+  };
+
+  const handleRatingSave = (rating: number, notes: string) => {
+    if (currentMealIndex !== null) {
+      onMealComplete(currentMealIndex, rating, notes);
+      setCurrentMealIndex(null);
+    }
+    setRatingModalOpen(false);
+  };
+
+  const getCurrentMealName = () => {
+    if (currentMealIndex !== null && weekData.meals[currentMealIndex]) {
+      return weekData.meals[currentMealIndex].name;
+    }
+    return "this meal";
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -67,11 +91,7 @@ export const WeeklyRecipes: React.FC<WeeklyRecipesProps> = ({
                         <span>See Full Recipe</span>
                       </button>
                       <button
-                        onClick={() => {
-                          const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars for demo
-                          const notes = ['Delicious!', 'Really good', 'Perfect!', 'Loved it'][Math.floor(Math.random() * 4)];
-                          onMealComplete(index, rating, notes);
-                        }}
+                        onClick={() => handleMarkComplete(index)}
                         className="bg-primary-500 hover:bg-primary-600 text-white px-3 py-1 rounded text-sm transition-colors"
                       >
                         Mark Complete & Rate
@@ -150,6 +170,17 @@ export const WeeklyRecipes: React.FC<WeeklyRecipesProps> = ({
           </div>
         </div>
       )}
+
+      {/* Meal Rating Modal */}
+      <MealRatingModal
+        isOpen={ratingModalOpen}
+        onClose={() => {
+          setRatingModalOpen(false);
+          setCurrentMealIndex(null);
+        }}
+        onSave={handleRatingSave}
+        mealName={getCurrentMealName()}
+      />
     </div>
   );
 };

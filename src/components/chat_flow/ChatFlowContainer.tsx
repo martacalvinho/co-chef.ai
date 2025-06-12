@@ -10,6 +10,7 @@ import { PeopleCountSelector } from './PeopleCountSelector';
 import { CookingLevelSelector } from './CookingLevelSelector';
 import { WeeklyMealOptions } from './WeeklyMealOptions';
 import { ShoppingListDisplay } from './ShoppingListDisplay';
+import { RecipeCheckDisplay } from './RecipeCheckDisplay';
 import { WeeklyRecipes } from './WeeklyRecipes';
 import { EndWeekSummary } from './EndWeekSummary';
 import { WeekData, ShoppingListItem, ChatStep } from './types';
@@ -485,10 +486,8 @@ export const ChatFlowContainer: React.FC = () => {
   };
 
   const handleStartWeek = () => {
-    if (window.confirm('Are you ready to start this week? This will begin tracking your meal progress.')) {
-      setCurrentStep('recipe-check');
-      addMessage('assistant', 'recipe-check');
-    }
+    setCurrentStep('recipe-check');
+    addMessage('assistant', 'recipe-check');
   };
 
   const handleRecipeConfirm = () => {
@@ -701,6 +700,14 @@ export const ChatFlowContainer: React.FC = () => {
           />
         ) : null;
       
+      case 'recipe-check':
+        return (
+          <RecipeCheckDisplay
+            onRecipeConfirm={handleRecipeConfirm}
+            onViewShoppingList={() => setCurrentView('shopping')}
+          />
+        );
+      
       case 'week-execution':
         return currentWeekData ? (
           <WeeklyRecipes
@@ -813,7 +820,7 @@ export const ChatFlowContainer: React.FC = () => {
     }
 
     // Handle other message types that don't need special rendering
-    if (['plan-type-selection', 'meals-per-day-selection', 'meal-preferences-selection', 'people-count-selection', 'skill-level-selection', 'custom-input'].includes(message.content)) {
+    if (['plan-type-selection', 'meals-per-day-selection', 'meal-preferences-selection', 'people-count-selection', 'skill-level-selection', 'custom-input', 'recipe-check'].includes(message.content)) {
       return null; // These are handled by the step components
     }
 
@@ -883,7 +890,7 @@ export const ChatFlowContainer: React.FC = () => {
           ))}
           
           {/* Show current step content */}
-          {currentStep !== 'initial' && currentStep !== 'generating' && currentStep !== 'recipe-check' && (
+          {currentStep !== 'initial' && currentStep !== 'generating' && (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               {renderCurrentStepContent()}
             </div>

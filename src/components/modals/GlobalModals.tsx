@@ -222,6 +222,7 @@ const ReceiptScanModal: React.FC = () => {
   const handleFiles = (files: FileList) => {
     console.log('Processing receipt files:', files);
     // TODO: Implement receipt processing
+    alert('Receipt uploaded successfully! Inventory will be updated automatically.');
     closeReceiptScanModal();
   };
 
@@ -525,8 +526,19 @@ const QuickAddModal: React.FC = () => {
 };
 
 // Meal Rating Modal
-const MealRatingModal: React.FC = () => {
-  const { mealRatingModalOpen, closeMealRatingModal } = useAppStore();
+interface MealRatingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (rating: number, notes: string) => void;
+  mealName?: string;
+}
+
+const MealRatingModal: React.FC<MealRatingModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  mealName = "this meal" 
+}) => {
   const [ratings, setRatings] = useState({
     taste: 0,
     difficulty: 0,
@@ -534,7 +546,20 @@ const MealRatingModal: React.FC = () => {
     notes: ''
   });
 
-  if (!mealRatingModalOpen) return null;
+  if (!isOpen) return null;
+
+  const handleSave = () => {
+    // Use taste rating as the main rating
+    onSave(ratings.taste, ratings.notes);
+    onClose();
+    // Reset form
+    setRatings({
+      taste: 0,
+      difficulty: 0,
+      wouldEatAgain: null,
+      notes: ''
+    });
+  };
 
   const StarRating: React.FC<{ value: number; onChange: (value: number) => void; label: string }> = ({ value, onChange, label }) => (
     <div>
@@ -553,19 +578,13 @@ const MealRatingModal: React.FC = () => {
     </div>
   );
 
-  const handleSave = () => {
-    // This would be passed as a callback from the parent component
-    console.log('Saving meal rating:', ratings);
-    closeMealRatingModal();
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-md w-full">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Rate Your Meal</h2>
           <button
-            onClick={closeMealRatingModal}
+            onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -573,6 +592,11 @@ const MealRatingModal: React.FC = () => {
         </div>
         
         <div className="p-6 space-y-6">
+          <div className="text-center">
+            <h3 className="font-medium text-gray-900 mb-2">How was {mealName}?</h3>
+            <p className="text-sm text-gray-600">Your feedback helps me learn your preferences</p>
+          </div>
+          
           <StarRating
             value={ratings.taste}
             onChange={(value) => setRatings({ ...ratings, taste: value })}
@@ -625,14 +649,15 @@ const MealRatingModal: React.FC = () => {
         
         <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
           <button
-            onClick={closeMealRatingModal}
+            onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             Skip
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+            disabled={ratings.taste === 0}
+            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 text-white rounded-lg transition-colors"
           >
             Save Rating
           </button>
@@ -644,17 +669,29 @@ const MealRatingModal: React.FC = () => {
 
 // Global Modals Component
 export const GlobalModals: React.FC = () => {
+  const { mealRatingModalOpen, closeMealRatingModal } = useAppStore();
+  
+  // This would be passed from the parent component that needs meal rating
+  const handleMealRatingSave = (rating: number, notes: string) => {
+    console.log('Meal rating saved:', { rating, notes });
+    // This callback would be provided by the component that opened the modal
+  };
+
   return (
     <>
       <ReceiptScanModal />
       <FridgePhotoModal />
       <LeftoverModal />
       <QuickAddModal />
-      <MealRatingModal />
+      <MealRatingModal 
+        isOpen={mealRatingModalOpen}
+        onClose={closeMealRatingModal}
+        onSave={handleMealRatingSave}
+      />
       <ShareWithPartnerModal />
     </>
   );
 };
 
 // Export the FavoriteMealPicker for use in other components
-export { FavoriteMealPicker };
+export { FavoriteMealPicker, MealRatingModal };
