@@ -3,6 +3,8 @@ import { Send, Wand2, ShoppingCart, Camera, Utensils, Plus, MessageSquare, Arrow
 import { useAppStore } from '../../store';
 import { generateMealPlan, generateShoppingList, generateSingleMeal, type MealPlanRequest, type GeneratedMeal, AIResponseError, JSONParseError } from '../../services/aiService';
 import { ChatNavigation } from './ChatNavigation';
+import { WelcomeScreen } from './WelcomeScreen';
+import { InventoryAnalysisFlow } from './InventoryAnalysisFlow';
 import { MealTypeSelector } from './MealTypeSelector';
 import { MealCountSelector } from './MealCountSelector';
 import { MealPreferenceSelector } from './MealPreferenceSelector';
@@ -13,6 +15,7 @@ import { ShoppingListDisplay } from './ShoppingListDisplay';
 import { RecipeCheckDisplay } from './RecipeCheckDisplay';
 import { WeeklyRecipes } from './WeeklyRecipes';
 import { EndWeekSummary } from './EndWeekSummary';
+import { FavoriteMealPicker } from '../modals/GlobalModals';
 import { WeekData, ShoppingListItem, ChatStep } from './types';
 
 interface Message {
@@ -70,6 +73,7 @@ export const ChatFlowContainer: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentWeekData, setCurrentWeekData] = useState<WeekData | null>(null);
   const [currentStep, setCurrentStep] = useState<ChatStep>('initial');
+  const [flowType, setFlowType] = useState<'generate' | 'inventory' | null>(null);
   const [previousStepStack, setPreviousStepStack] = useState<ChatStep[]>([]);
   const [selectedPlanType, setSelectedPlanType] = useState('');
   const [customPlanType, setCustomPlanType] = useState('');
@@ -82,6 +86,7 @@ export const ChatFlowContainer: React.FC = () => {
   const [leftoverIngredients, setLeftoverIngredients] = useState<string[]>([]);
   const [viewingRecipe, setViewingRecipe] = useState<number | null>(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
+  const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load from localStorage on component mount
@@ -92,6 +97,7 @@ export const ChatFlowContainer: React.FC = () => {
         const parsed = JSON.parse(savedData);
         setCurrentWeekData(parsed.weekData);
         setCurrentStep(parsed.step);
+        setFlowType(parsed.flowType);
         setSelectedPlanType(parsed.selectedPlanType || '');
         setSelectedMealsPerDay(parsed.selectedMealsPerDay || 0);
         setSelectedMealPreferences(parsed.selectedMealPreferences || []);
@@ -101,6 +107,7 @@ export const ChatFlowContainer: React.FC = () => {
         setMealRatings(parsed.mealRatings || {});
         setLeftoverIngredients(parsed.leftoverIngredients || []);
         setPreviousStepStack(parsed.previousStepStack || []);
+        setAvailableIngredients(parsed.availableIngredients || []);
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
@@ -112,6 +119,7 @@ export const ChatFlowContainer: React.FC = () => {
     const dataToSave = {
       weekData: currentWeekData,
       step: currentStep,
+      flowType,
       selectedPlanType,
       selectedMealsPerDay,
       selectedMealPreferences,
@@ -120,10 +128,11 @@ export const ChatFlowContainer: React.FC = () => {
       completedMeals: Array.from(completedMeals),
       mealRatings,
       leftoverIngredients,
-      previousStepStack
+      previousStepStack,
+      availableIngredients
     };
     localStorage.setItem('kitchenai-current-week', JSON.stringify(dataToSave));
-  }, [currentWeekData, currentStep, selectedPlanType, selectedMealsPerDay, selectedMealPreferences, selectedPeopleCount, selectedSkillLevel, completedMeals, mealRatings, leftoverIngredients, previousStepStack]);
+  }, [currentWeekData, currentStep, flowType, selectedPlanType, selectedMealsPerDay, selectedMealPreferences, selectedPeopleCount, selectedSkillLevel, completedMeals, mealRatings, leftoverIngredients, previousStepStack, availableIngredients]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,9 +187,79 @@ export const ChatFlowContainer: React.FC = () => {
     }, 1000);
   };
 
-  const handlePlanMyWeek = () => {
+  const handleGenerateWeeklyMenu = () => {
+    setFlowType('generate');
     setCurrentStep('plan-type');
     addMessage('assistant', 'plan-type-selection');
+  };
+
+  const handleUseWhatIHave = () => {
+    setFlowType('inventory');
+    setCurrentStep('plan-type'); // Will show inventory analysis flow
+    addMessage('assistant', 'Starting inventory analysis flow...');
+  };
+
+  const handleInventoryAnalysisComplete = async (analyzedIngredients: string[]) => {
+    setAvailableIngredients(analyzedIngredients);
+    
+    // Set default values for inventory-based planning
+    setSelectedPlanType('meals using available ingredients');
+    setSelectedMealsPerDay(3); // Default to 3 meals
+    setSelectedMealPreferences(['breakfast', 'lunch', 'dinner']);
+    setSelectedPeopleCount(2); // Default to 2 people
+    setSelectedSkillLevel('Medium'); // Default skill level
+    
+    // Skip to generation step
+    setCurrentStep('generating');
+    addMessage('assistant', 'Generating meals using your available ingredients...');
+    
+    setIsLoading(true);
+    
+    const generateInventoryMealPlanWithRetry = async () => {
+      try {
+        const request: MealPlanRequest = {
+          planType: `meals using these available ingredients: ${analyzedIngredients.join(', ')}`,
+          mealsPerDay: 3,
+          peopleCount: 2,
+          skillLevel: 'Medium',
+          preferences: ['breakfast', 'lunch', 'dinner']
+        };
+        
+        console.log('Generating inventory-based meal plan with request:', request);
+        const meals = await generateMealPlan(request);
+        console.log('Generated inventory-based meals:', meals);
+        
+        const weekData: WeekData = {
+          planType: 'meals using available ingredients',
+          mealsPerDay: 3,
+          peopleCount: 2,
+          skillLevel: 'Medium',
+          meals: meals,
+          weekStartDate: new Date().toISOString()
+        };
+        
+        setCurrentWeekData(weekData);
+        setCurrentStep('menu-review');
+        addMessage('assistant', 'inventory-meal-plan-generated', weekData);
+        addSuccessNotification('Meal plan generated using your available ingredients!');
+      } catch (error) {
+        console.error('Error generating inventory-based meal plan:', error);
+        let errorMessage = 'Sorry, there was an error generating your meal plan.';
+        
+        if (error instanceof AIResponseError) {
+          errorMessage = 'AI service is currently unavailable. Please try again.';
+        } else if (error instanceof JSONParseError) {
+          errorMessage = 'There was an issue processing the meal plan. Please try again.';
+        }
+        
+        addMessage('error', errorMessage, null, true, generateInventoryMealPlanWithRetry);
+        setCurrentStep('plan-type');
+      }
+      
+      setIsLoading(false);
+    };
+    
+    await generateInventoryMealPlanWithRetry();
   };
 
   const resetDependentState = (fromStep: ChatStep) => {
@@ -542,16 +621,25 @@ export const ChatFlowContainer: React.FC = () => {
     // Clear localStorage and reset for new week
     localStorage.removeItem('kitchenai-current-week');
     setCurrentStep('initial');
+    setFlowType(null);
     setCurrentWeekData(null);
     setCompletedMeals(new Set());
     setMealRatings({});
     setLeftoverIngredients([]);
     setPreviousStepStack([]);
+    setAvailableIngredients([]);
     addMessage('assistant', 'Week saved to your history! You can now access this menu in your history and choose to reuse it in the future. Ready to plan your next week?');
   };
 
   const handleCreateFromFavorites = () => {
     setShowFavoritePicker(true);
+  };
+
+  const handleFavoriteMenuCreated = (selectedMeals: string[]) => {
+    console.log('Creating menu from favorites:', selectedMeals);
+    // TODO: Implement creating a new week from selected favorite meals
+    alert(`Creating new week with ${selectedMeals.length} favorite meals!`);
+    setShowFavoritePicker(false);
   };
 
   const handleLeftoverSuggestions = () => {
@@ -569,7 +657,7 @@ export const ChatFlowContainer: React.FC = () => {
     return (
       <div className="flex items-center space-x-2 mb-4 overflow-x-auto pb-2">
         <button
-          onClick={handlePlanMyWeek}
+          onClick={handleGenerateWeeklyMenu}
           className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-3 py-2 rounded-lg transition-colors whitespace-nowrap text-sm"
         >
           <Wand2 className="w-4 h-4" />
@@ -618,6 +706,20 @@ export const ChatFlowContainer: React.FC = () => {
   };
 
   const renderCurrentStepContent = () => {
+    // Handle inventory flow
+    if (flowType === 'inventory' && currentStep === 'plan-type') {
+      return (
+        <InventoryAnalysisFlow
+          onComplete={handleInventoryAnalysisComplete}
+          onBack={() => {
+            setCurrentStep('initial');
+            setFlowType(null);
+          }}
+        />
+      );
+    }
+
+    // Handle regular generate flow
     switch (currentStep) {
       case 'plan-type':
         return (
@@ -743,46 +845,10 @@ export const ChatFlowContainer: React.FC = () => {
   const renderMessage = (message: Message) => {
     if (message.content === 'welcome') {
       return (
-        <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-6 border border-primary-200">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-              <ChefHat className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Welcome to Kitchen.AI!</h3>
-              <p className="text-sm text-gray-600">Your intelligent meal planning assistant</p>
-            </div>
-          </div>
-          
-          <div className="space-y-3 mb-4">
-            <p className="text-gray-700">I can help you:</p>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-                <span>Generate personalized weekly meal plans</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-secondary-500 rounded-full"></div>
-                <span>Create smart shopping lists from your meals</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-accent-500 rounded-full"></div>
-                <span>Track your meals and manage leftovers</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-success-500 rounded-full"></div>
-                <span>Learn your preferences and improve suggestions</span>
-              </li>
-            </ul>
-          </div>
-          
-          <button
-            onClick={handlePlanMyWeek}
-            className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 px-4 rounded-lg transition-colors font-medium"
-          >
-            Let's Plan Your Week! 🍽️
-          </button>
-        </div>
+        <WelcomeScreen
+          onGenerateWeeklyMenu={handleGenerateWeeklyMenu}
+          onUseWhatIHave={handleUseWhatIHave}
+        />
       );
     }
 
@@ -935,6 +1001,13 @@ export const ChatFlowContainer: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Favorite Meal Picker Modal */}
+      <FavoriteMealPicker
+        isOpen={showFavoritePicker}
+        onClose={() => setShowFavoritePicker(false)}
+        onConfirm={handleFavoriteMenuCreated}
+      />
     </div>
   );
 };
