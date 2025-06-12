@@ -1,20 +1,29 @@
 import OpenAI from 'openai';
 
-// Check if API key is available
+// Check if API key is available and properly formatted
 const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 if (!apiKey) {
   console.error('VITE_OPENROUTER_API_KEY is not set in environment variables');
+} else {
+  // Log key details for debugging (safely)
+  console.log(`API key loaded with length: ${apiKey.length}`);
+  console.log(`API key prefix: ${apiKey.substring(0, 8)}...`);
+  
+  if (!apiKey.startsWith('sk-or-')) {
+    console.warn('WARNING: OpenRouter API key does not start with expected prefix "sk-or-"');
+  }
 }
 
+// Recreate the OpenAI client exactly as shown in OpenRouter docs
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: apiKey || "fallback-key", // Provide fallback to prevent initialization errors
+  apiKey: apiKey!, // Use the environment variable (non-null assertion, previously validated)
   defaultHeaders: {
-    "HTTP-Referer": "https://kitchen-ai.app",
-    "X-Title": "Kitchen.AI",
+    "HTTP-Referer": "https://kitchen-ai.app", // Site URL for rankings on openrouter.ai
+    "X-Title": "Kitchen.AI", // Site title for rankings on openrouter.ai
   },
-  dangerouslyAllowBrowser: true
+  dangerouslyAllowBrowser: true // Critical for browser usage
 });
 
 // Custom error classes
@@ -111,7 +120,7 @@ const parseAIResponse = (response: string): any => {
   try {
     return JSON.parse(fixedJson);
   } catch (parseError) {
-    throw new JSONParseError(`Failed to parse AI response: ${parseError.message}`);
+    throw new JSONParseError(`Failed to parse AI response: ${(parseError as Error).message}`);
   }
 };
 
@@ -176,6 +185,8 @@ const generateAbsoluteRequirements = (planType: string): string => {
 };
 
 export const generateSingleMeal = async (request: MealPlanRequest): Promise<GeneratedMeal> => {
+  console.log('[AI_SERVICE_DEBUG] generateSingleMeal called. Using API Key (first 10 chars):', apiKey ? apiKey.substring(0, 10) + '...' : 'API_KEY_IS_UNDEFINED_OR_EMPTY');
+  console.log('[AI_SERVICE_DEBUG] Model for API call:', "mistralai/mistral-small-3.1-24b-instruct:free");
   // Check API key before making request
   if (!apiKey) {
     throw new AIResponseError('API key not configured. Please check your environment variables.');
@@ -211,8 +222,10 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
     
     The meal MUST perfectly match "${request.planType}" theme - no exceptions.`;
 
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "google/gemma-2-9b-it:free",
+      model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
       max_tokens: 1500,
@@ -276,8 +289,10 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     
     Generate exactly ${totalMeals} unique meals, all matching "${request.planType}" theme perfectly.`;
 
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "google/gemma-2-9b-it:free",
+      model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
       max_tokens: 4000,
@@ -298,7 +313,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
       try {
         return validateGeneratedMeal(meal);
       } catch (error) {
-        throw new Error(`Invalid meal at index ${index}: ${error.message}`);
+        throw new Error(`Invalid meal at index ${index}: ${(error as Error).message}`);
       }
     });
     
@@ -335,8 +350,10 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<stri
     
     Make sure to include ALL ingredients needed for the ${meals.length} meals with appropriate consolidated quantities.`;
 
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
+    console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "google/gemma-2-9b-it:free",
+      model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.3,
       max_tokens: 2000,
