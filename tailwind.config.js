@@ -4,6 +4,39 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Basil-inspired color palette
+        basil: {
+          cream: '#F5F2E8', // Warm cream background like in mascot images
+          green: {
+            50: '#F0F9F0',
+            100: '#E1F3E1',
+            200: '#C3E7C3',
+            300: '#8FD18F', // Light basil green
+            400: '#6BB96B', // Medium basil green
+            500: '#4A9B4A', // Main basil green
+            600: '#3A7A3A',
+            700: '#2A5A2A',
+            800: '#1A3A1A',
+            900: '#0A1A0A',
+          },
+          orange: {
+            50: '#FFF7ED',
+            100: '#FFEDD5',
+            200: '#FED7AA',
+            300: '#FDBA74',
+            400: '#FB923C', // Carrot orange from mascot
+            500: '#F97316',
+            600: '#EA580C',
+          },
+          brown: {
+            50: '#FAF7F2',
+            100: '#F5EFE5',
+            200: '#E8D5C4', // Grocery bag brown
+            300: '#D4B896',
+            400: '#B8956B',
+            500: '#8B6914',
+          }
+        },
         primary: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -85,6 +118,10 @@ export default {
         'fade-in-up': 'fadeInUp 0.5s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'slide-in-right': 'slideInRight 0.3s ease-out',
+        'float': 'float 3s ease-in-out infinite',
+        'bounce-gentle': 'bounceGentle 2s ease-in-out infinite',
+        'wiggle': 'wiggle 1s ease-in-out infinite',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -102,6 +139,22 @@ export default {
         slideInRight: {
           '0%': { opacity: '0', transform: 'translateX(10px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        bounceGentle: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-5px)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-3deg)' },
+          '50%': { transform: 'rotate(3deg)' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
         },
       },
     },
