@@ -1,0 +1,155 @@
+import React from 'react';
+import { BookOpen, Clock, Users, ArrowLeft, Star } from 'lucide-react';
+import { WeekData } from './types';
+
+interface WeeklyRecipesProps {
+  weekData: WeekData;
+  completedMeals: Set<number>;
+  mealRatings: Record<number, { rating: number; notes: string }>;
+  onMealComplete: (mealIndex: number, rating: number, notes: string) => void;
+  viewingRecipe: number | null;
+  onSetViewingRecipe: (index: number | null) => void;
+  onRecipeConfirm: () => void;
+}
+
+export const WeeklyRecipes: React.FC<WeeklyRecipesProps> = ({
+  weekData,
+  completedMeals,
+  mealRatings,
+  onMealComplete,
+  viewingRecipe,
+  onSetViewingRecipe,
+  onRecipeConfirm
+}) => {
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="font-semibold text-gray-900 mb-4">This Week's Meals</h3>
+        <p className="text-gray-700 mb-4">
+          Check off meals as you cook and eat them. Rate each meal to help me learn your preferences!
+        </p>
+        
+        <div className="space-y-3">
+          {weekData.meals.map((meal, index) => {
+            const isCompleted = completedMeals.has(index);
+            const dayIndex = Math.floor(index / weekData.mealsPerDay);
+            const mealTypeIndex = index % weekData.mealsPerDay;
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+            
+            return (
+              <div key={index} className={`p-3 rounded-lg border ${isCompleted ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h4 className={`font-medium ${isCompleted ? 'text-green-900 line-through' : 'text-gray-900'}`}>
+                      {days[dayIndex]} {mealTypes[mealTypeIndex]}: {meal.name}
+                    </h4>
+                    {isCompleted && mealRatings[index] && (
+                      <div className="flex items-center space-x-2 mt-1">
+                        <div className="flex items-center space-x-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-3 h-3 ${i < mealRatings[index].rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                        {mealRatings[index].notes && (
+                          <span className="text-xs text-gray-600">"{mealRatings[index].notes}"</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {!isCompleted && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => onSetViewingRecipe(index)}
+                        className="bg-secondary-500 hover:bg-secondary-600 text-white px-3 py-1 rounded text-sm transition-colors flex items-center space-x-1"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        <span>See Full Recipe</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars for demo
+                          const notes = ['Delicious!', 'Really good', 'Perfect!', 'Loved it'][Math.floor(Math.random() * 4)];
+                          onMealComplete(index, rating, notes);
+                        }}
+                        className="bg-primary-500 hover:bg-primary-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                      >
+                        Mark Complete & Rate
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recipe Modal */}
+      {viewingRecipe !== null && weekData.meals[viewingRecipe] && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">{weekData.meals[viewingRecipe].name}</h2>
+              <button
+                onClick={() => onSetViewingRecipe(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <p className="text-gray-700 mb-4">{weekData.meals[viewingRecipe].description}</p>
+                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <span className="flex items-center space-x-1">
+                    <Clock className="w-4 h-4" />
+                    <span>{weekData.meals[viewingRecipe].cookTime} minutes</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <Users className="w-4 h-4" />
+                    <span>{weekData.meals[viewingRecipe].servings} servings</span>
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    weekData.meals[viewingRecipe].difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
+                    weekData.meals[viewingRecipe].difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {weekData.meals[viewingRecipe].difficulty}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Ingredients</h3>
+                <ul className="space-y-2">
+                  {weekData.meals[viewingRecipe].ingredients.map((ingredient, i) => (
+                    <li key={i} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
+                      <span className="text-gray-700">{ingredient}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Instructions</h3>
+                <ol className="space-y-3">
+                  {weekData.meals[viewingRecipe].instructions.map((instruction, i) => (
+                    <li key={i} className="flex space-x-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        {i + 1}
+                      </span>
+                      <span className="text-gray-700">{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
