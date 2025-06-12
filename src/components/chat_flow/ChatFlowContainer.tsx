@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Wand2, ShoppingCart, Camera, Utensils, Plus, MessageSquare, ArrowLeft, RefreshCw, Check, Share, Users, Clock, ChefHat, Star, Receipt, History, Edit, BookOpen, Eye } from 'lucide-react';
+import { Send, Wand2, ShoppingCart, Camera, Utensils, Plus, History, ArrowLeft, RefreshCw, Check, Share, Users, Clock, ChefHat, Star, Receipt, Edit, BookOpen, Eye } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { generateMealPlan, generateShoppingList, generateSingleMeal, type MealPlanRequest, type GeneratedMeal, AIResponseError, JSONParseError } from '../../services/aiService';
 import { ChatNavigation } from './ChatNavigation';
@@ -703,14 +703,6 @@ export const ChatFlowContainer: React.FC = () => {
     
     return (
       <div className="flex items-center space-x-2 mb-4 overflow-x-auto pb-2">
-        <button
-          onClick={handleGenerateWeeklyMenu}
-          className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-3 py-2 rounded-lg transition-colors whitespace-nowrap text-sm"
-        >
-          <Wand2 className="w-4 h-4" />
-          <span>Plan My Week</span>
-        </button>
-        
         {hasShoppingList && (
           <button
             onClick={() => setCurrentView('shopping')}
@@ -740,14 +732,6 @@ export const ChatFlowContainer: React.FC = () => {
             <span>Receipt Photo</span>
           </button>
         )}
-        
-        <button
-          onClick={() => setCurrentView('menus')}
-          className="flex items-center space-x-2 bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition-colors whitespace-nowrap text-sm"
-        >
-          <History className="w-4 h-4" />
-          <span>History</span>
-        </button>
       </div>
     );
   };
@@ -970,9 +954,9 @@ export const ChatFlowContainer: React.FC = () => {
             <button
               onClick={() => setCurrentView('menus')}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Saved menus"
+              title="Menu history"
             >
-              <MessageSquare className="w-5 h-5" />
+              <History className="w-5 h-5" />
             </button>
             <button
               onClick={() => setCurrentView('shopping')}

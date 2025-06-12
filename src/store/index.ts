@@ -39,7 +39,7 @@ interface InventoryItem {
 }
 
 interface AppState {
-  currentView: 'chat' | 'menus' | 'shopping';
+  currentView: 'homepage' | 'chat' | 'menus' | 'shopping';
   savedMenus: SavedMenu[];
   inventory: InventoryItem[];
   
@@ -52,7 +52,7 @@ interface AppState {
   shareWithPartnerModalOpen: boolean;
   
   // Actions
-  setCurrentView: (view: 'chat' | 'menus' | 'shopping') => void;
+  setCurrentView: (view: 'homepage' | 'chat' | 'menus' | 'shopping') => void;
   addSavedMenu: (menu: SavedMenu) => void;
   toggleMenuFavorite: (id: string) => void;
   deleteSavedMenu: (id: string) => void;
@@ -139,7 +139,7 @@ export const useAppStore = create<AppState>((set, get) => {
   checkAndEndWeek();
 
   return {
-    currentView: 'chat',
+    currentView: 'homepage', // Changed to homepage as default
     savedMenus: [
       {
         id: '1',
