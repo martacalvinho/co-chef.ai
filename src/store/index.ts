@@ -8,9 +8,28 @@ interface SavedMenu {
   isFavorite: boolean;
 }
 
+interface InventoryItem {
+  id: string;
+  household_id: string;
+  ingredient_name: string;
+  quantity?: number;
+  unit?: string;
+  current_status: 'available' | 'low' | 'out_of_stock' | 'used' | 'expired';
+  expiry_date?: string;
+  purchase_date?: string;
+  cost_per_unit?: number;
+  location?: string;
+  added_by_user_id?: string;
+  source: 'receipt_scan' | 'manual_entry' | 'fridge_photo_ai' | 'leftover_generation';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AppState {
   currentView: 'chat' | 'menus' | 'shopping';
   savedMenus: SavedMenu[];
+  inventory: InventoryItem[];
   
   // Modal states
   receiptScanModalOpen: boolean;
@@ -24,6 +43,11 @@ interface AppState {
   addSavedMenu: (menu: SavedMenu) => void;
   toggleMenuFavorite: (id: string) => void;
   deleteSavedMenu: (id: string) => void;
+  
+  // Inventory actions
+  addInventoryItem: (item: InventoryItem) => void;
+  updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
+  deleteInventoryItem: (id: string) => void;
   
   // Modal actions
   openReceiptScanModal: () => void;
@@ -69,6 +93,46 @@ export const useAppStore = create<AppState>((set) => ({
       isFavorite: false
     }
   ],
+  inventory: [
+    {
+      id: '1',
+      household_id: '1',
+      ingredient_name: 'Chicken Breast',
+      quantity: 2,
+      unit: 'lbs',
+      current_status: 'available',
+      expiry_date: '2024-12-20',
+      location: 'fridge',
+      source: 'manual_entry',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: '2',
+      household_id: '1',
+      ingredient_name: 'Pasta',
+      quantity: 1,
+      unit: 'box',
+      current_status: 'available',
+      location: 'pantry',
+      source: 'manual_entry',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: '3',
+      household_id: '1',
+      ingredient_name: 'Milk',
+      quantity: 0.5,
+      unit: 'gallon',
+      current_status: 'low',
+      expiry_date: '2024-12-15',
+      location: 'fridge',
+      source: 'manual_entry',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ],
   
   // Modal states
   receiptScanModalOpen: false,
@@ -88,6 +152,19 @@ export const useAppStore = create<AppState>((set) => ({
   })),
   deleteSavedMenu: (id) => set((state) => ({
     savedMenus: state.savedMenus.filter(menu => menu.id !== id)
+  })),
+  
+  // Inventory actions
+  addInventoryItem: (item) => set((state) => ({
+    inventory: [...state.inventory, item]
+  })),
+  updateInventoryItem: (id, updates) => set((state) => ({
+    inventory: state.inventory.map(item =>
+      item.id === id ? { ...item, ...updates, updated_at: new Date().toISOString() } : item
+    )
+  })),
+  deleteInventoryItem: (id) => set((state) => ({
+    inventory: state.inventory.filter(item => item.id !== id)
   })),
   
   // Modal actions

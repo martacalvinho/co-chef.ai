@@ -551,3 +551,6 @@ export const GlobalModals: React.FC = () => {
     </>
   );
 };
+
+// Export the FavoriteMealPicker for use in other components
+export { FavoriteMealPicker };

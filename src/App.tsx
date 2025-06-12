@@ -2,6 +2,7 @@ import React from 'react';
 import { ChatFlowContainer } from './components/chat_flow/ChatFlowContainer';
 import { MenuLibrary } from './components/menus/MenuLibrary';
 import { ShoppingList } from './components/shopping/ShoppingList';
+import { GlobalModals } from './components/modals/GlobalModals';
 import { useAppStore } from './store';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {renderCurrentView()}
+      <GlobalModals />
     </div>
   );
 }

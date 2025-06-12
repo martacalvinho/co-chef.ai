@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Heart, Copy, Trash2, Plus, Search, RefreshCw, Calendar, Check } from 'lucide-react';
 import { useAppStore } from '../../store';
+import { FavoriteMealPicker } from '../modals/GlobalModals';
 
 export const MenuLibrary: React.FC = () => {
   const { setCurrentView, savedMenus, toggleMenuFavorite, deleteSavedMenu } = useAppStore();
@@ -208,6 +209,12 @@ export const MenuLibrary: React.FC = () => {
           </div>
         )}
       </div>
+
+      <FavoriteMealPicker
+        isOpen={showFavoritePicker}
+        onClose={() => setShowFavoritePicker(false)}
+        onConfirm={handleFavoriteMenuCreated}
+      />
     </div>
   );
 };
