@@ -31,6 +31,7 @@ export type ChatStep =
   | 'plan-type' 
   | 'custom-input' 
   | 'meals-per-day' 
+  | 'meal-preferences'
   | 'people-count' 
   | 'skill-level' 
   | 'generating' 

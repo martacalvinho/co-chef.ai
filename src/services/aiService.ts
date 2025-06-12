@@ -255,6 +255,8 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
 };
 
 export const generateMealPlan = async (request: MealPlanRequest): Promise<GeneratedMeal[]> => {
+  console.log('[AI_SERVICE_DEBUG] generateMealPlan called with request:', request);
+  
   // Check API key before making request
   if (!apiKey) {
     throw new AIResponseError('API key not configured. Please check your environment variables.');
@@ -267,14 +269,18 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     const totalMeals = request.mealsPerDay * 7;
     const absoluteRequirements = generateAbsoluteRequirements(request.planType);
     
+    // Handle meal preferences for specific meal types
+    const mealPreferencesConstraint = request.preferences?.length ? 
+      `- Meal types to generate: ${request.preferences.join(', ')} (CRITICAL: Only generate these specific meal types)` : '';
+    
     const prompt = `As a professional chef, generate a weekly meal plan with STRICT adherence to these requirements:
     - Plan type: "${request.planType}" (CRITICAL: ALL ${totalMeals} meals MUST be ${request.planType} dishes)
     - ${request.mealsPerDay} meals per day for 7 days (total: ${totalMeals} meals)
     - For ${request.peopleCount} people
     ${skillConstraint}
+    ${mealPreferencesConstraint}
     ${request.dietaryRestrictions?.length ? `- Dietary restrictions: ${request.dietaryRestrictions.join(', ')}` : ''}
     ${request.allergies?.length ? `- Allergies to avoid: ${request.allergies.join(', ')}` : ''}
-    ${request.preferences?.length ? `- Preferences: ${request.preferences.join(', ')}` : ''}
     
     ABSOLUTE REQUIREMENTS:
     ${absoluteRequirements}
@@ -291,6 +297,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     - Ensure variety within the theme (different proteins, cooking methods, flavors)
     - Each meal must be unique and creative while staying within the "${request.planType}" category
     - Balance the week with different cooking techniques and ingredient combinations
+    ${request.preferences?.length ? `- Focus ONLY on these meal types: ${request.preferences.join(', ')}` : ''}
     
     Return ONLY valid JSON in this exact format:
     {
@@ -319,11 +326,14 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     });
 
     const response = completion.choices[0].message.content;
+    console.log('[AI_SERVICE_DEBUG] Raw AI response:', response);
+    
     if (!response) {
       throw new AIResponseError('No response from AI service');
     }
     
     const parsed = parseAIResponse(response);
+    console.log('[AI_SERVICE_DEBUG] Parsed AI response:', parsed);
     
     if (!parsed.meals || !Array.isArray(parsed.meals)) {
       throw new Error('Invalid response structure: meals array not found');
@@ -341,11 +351,14 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
       throw new Error(`Expected ${totalMeals} meals, got ${validatedMeals.length}`);
     }
     
+    console.log('[AI_SERVICE_DEBUG] Final validated meals:', validatedMeals);
     return validatedMeals;
   });
 };
 
 export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<StructuredShoppingItem[]> => {
+  console.log('[AI_SERVICE_DEBUG] generateShoppingList called with meals:', meals);
+  
   // Check API key before making request
   if (!apiKey) {
     throw new AIResponseError('API key not configured. Please check your environment variables.');
@@ -355,6 +368,8 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<Stru
     // Extract all ingredients from all meals
     const allIngredients = meals.flatMap(meal => meal.ingredients);
     const ingredientText = allIngredients.join(', ');
+    
+    console.log('[AI_SERVICE_DEBUG] All ingredients for shopping list:', allIngredients);
     
     const prompt = `As a professional chef analyzing these ingredients from ${meals.length} meals in a weekly meal plan: ${ingredientText}
     
@@ -391,19 +406,24 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<Stru
     });
 
     const response = completion.choices[0].message.content;
+    console.log('[AI_SERVICE_DEBUG] Raw shopping list response:', response);
+    
     if (!response) {
       throw new AIResponseError('No response from AI service');
     }
     
     const parsed = parseAIResponse(response);
+    console.log('[AI_SERVICE_DEBUG] Parsed shopping list response:', parsed);
     
     if (!parsed.items || !Array.isArray(parsed.items)) {
+      console.error('[AI_SERVICE_DEBUG] Invalid shopping list response structure:', parsed);
       throw new Error('Invalid shopping list response structure');
     }
     
     // Validate and structure the items
     const structuredItems: StructuredShoppingItem[] = parsed.items.map((item: any, index: number) => {
       if (!item.name || typeof item.quantity !== 'number' || !item.unit) {
+        console.error(`[AI_SERVICE_DEBUG] Invalid shopping item at index ${index}:`, item);
         throw new Error(`Invalid shopping item at index ${index}: missing name, quantity, or unit`);
       }
       
@@ -414,6 +434,7 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<Stru
       };
     });
     
+    console.log('[AI_SERVICE_DEBUG] Final structured shopping items:', structuredItems);
     return structuredItems;
   });
 };

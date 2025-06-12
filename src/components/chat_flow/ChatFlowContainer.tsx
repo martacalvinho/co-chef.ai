@@ -5,6 +5,7 @@ import { generateMealPlan, generateShoppingList, generateSingleMeal, type MealPl
 import { ChatNavigation } from './ChatNavigation';
 import { MealTypeSelector } from './MealTypeSelector';
 import { MealCountSelector } from './MealCountSelector';
+import { MealPreferenceSelector } from './MealPreferenceSelector';
 import { PeopleCountSelector } from './PeopleCountSelector';
 import { CookingLevelSelector } from './CookingLevelSelector';
 import { WeeklyMealOptions } from './WeeklyMealOptions';
@@ -25,6 +26,18 @@ interface Message {
 
 // Smart item parsing function
 const parseItemString = (itemString: string): { name: string; quantity: number; unit: string } => {
+  // Handle structured items from AI (objects with name, quantity, unit)
+  if (typeof itemString === 'object' && itemString.name) {
+    return {
+      name: itemString.name,
+      quantity: itemString.quantity || 1,
+      unit: itemString.unit || 'items'
+    };
+  }
+  
+  // Convert to string if it's not already
+  const str = typeof itemString === 'string' ? itemString : String(itemString);
+  
   // Common patterns: "2 lbs ground beef", "1 cup flour", "3 large eggs"
   const patterns = [
     /^(\d+(?:\.\d+)?)\s+(lbs?|pounds?|kg|kilograms?)\s+(.+)$/i,
@@ -36,7 +49,7 @@ const parseItemString = (itemString: string): { name: string; quantity: number; 
   ];
   
   for (const pattern of patterns) {
-    const match = itemString.match(pattern);
+    const match = str.match(pattern);
     if (match) {
       const quantity = parseFloat(match[1]);
       const unit = match[2] || 'items';
@@ -46,11 +59,11 @@ const parseItemString = (itemString: string): { name: string; quantity: number; 
   }
   
   // If no pattern matches, treat as single item
-  return { name: itemString.trim(), quantity: 1, unit: 'items' };
+  return { name: str.trim(), quantity: 1, unit: 'items' };
 };
 
 export const ChatFlowContainer: React.FC = () => {
-  const { setCurrentView, addSavedMenu } = useAppStore();
+  const { setCurrentView, addSavedMenu, openShareWithPartnerModal } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +73,7 @@ export const ChatFlowContainer: React.FC = () => {
   const [selectedPlanType, setSelectedPlanType] = useState('');
   const [customPlanType, setCustomPlanType] = useState('');
   const [selectedMealsPerDay, setSelectedMealsPerDay] = useState(0);
+  const [selectedMealPreferences, setSelectedMealPreferences] = useState<string[]>([]);
   const [selectedPeopleCount, setSelectedPeopleCount] = useState(0);
   const [selectedSkillLevel, setSelectedSkillLevel] = useState('');
   const [completedMeals, setCompletedMeals] = useState<Set<number>>(new Set());
@@ -79,6 +93,7 @@ export const ChatFlowContainer: React.FC = () => {
         setCurrentStep(parsed.step);
         setSelectedPlanType(parsed.selectedPlanType || '');
         setSelectedMealsPerDay(parsed.selectedMealsPerDay || 0);
+        setSelectedMealPreferences(parsed.selectedMealPreferences || []);
         setSelectedPeopleCount(parsed.selectedPeopleCount || 0);
         setSelectedSkillLevel(parsed.selectedSkillLevel || '');
         setCompletedMeals(new Set(parsed.completedMeals || []));
@@ -98,6 +113,7 @@ export const ChatFlowContainer: React.FC = () => {
       step: currentStep,
       selectedPlanType,
       selectedMealsPerDay,
+      selectedMealPreferences,
       selectedPeopleCount,
       selectedSkillLevel,
       completedMeals: Array.from(completedMeals),
@@ -106,7 +122,7 @@ export const ChatFlowContainer: React.FC = () => {
       previousStepStack
     };
     localStorage.setItem('kitchenai-current-week', JSON.stringify(dataToSave));
-  }, [currentWeekData, currentStep, selectedPlanType, selectedMealsPerDay, selectedPeopleCount, selectedSkillLevel, completedMeals, mealRatings, leftoverIngredients, previousStepStack]);
+  }, [currentWeekData, currentStep, selectedPlanType, selectedMealsPerDay, selectedMealPreferences, selectedPeopleCount, selectedSkillLevel, completedMeals, mealRatings, leftoverIngredients, previousStepStack]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -170,6 +186,7 @@ export const ChatFlowContainer: React.FC = () => {
     switch (fromStep) {
       case 'plan-type':
         setSelectedMealsPerDay(0);
+        setSelectedMealPreferences([]);
         setSelectedPeopleCount(0);
         setSelectedSkillLevel('');
         setCurrentWeekData(null);
@@ -178,6 +195,15 @@ export const ChatFlowContainer: React.FC = () => {
         setLeftoverIngredients([]);
         break;
       case 'meals-per-day':
+        setSelectedMealPreferences([]);
+        setSelectedPeopleCount(0);
+        setSelectedSkillLevel('');
+        setCurrentWeekData(null);
+        setCompletedMeals(new Set());
+        setMealRatings({});
+        setLeftoverIngredients([]);
+        break;
+      case 'meal-preferences':
         setSelectedPeopleCount(0);
         setSelectedSkillLevel('');
         setCurrentWeekData(null);
@@ -245,6 +271,23 @@ export const ChatFlowContainer: React.FC = () => {
   const handleMealsPerDaySelection = (mealsPerDay: number) => {
     setSelectedMealsPerDay(mealsPerDay);
     addMessage('user', `${mealsPerDay} meal${mealsPerDay > 1 ? 's' : ''} per day`);
+    
+    // If 1, 2, or 3 meals per day, ask for meal preferences
+    if (mealsPerDay <= 3) {
+      addMessage('assistant', 'meal-preferences-selection');
+      proceedToNextStep('meal-preferences');
+    } else {
+      // For 4 meals (all meals), skip preferences and go to people count
+      setSelectedMealPreferences(['breakfast', 'lunch', 'dinner', 'snack']);
+      addMessage('assistant', 'people-count-selection');
+      proceedToNextStep('people-count');
+    }
+  };
+
+  const handleMealPreferencesSelection = (preferences: string[]) => {
+    setSelectedMealPreferences(preferences);
+    const preferencesText = preferences.join(', ');
+    addMessage('user', `I want ${preferencesText}`);
     addMessage('assistant', 'people-count-selection');
     proceedToNextStep('people-count');
   };
@@ -270,10 +313,13 @@ export const ChatFlowContainer: React.FC = () => {
           planType: selectedPlanType,
           mealsPerDay: selectedMealsPerDay,
           peopleCount: selectedPeopleCount,
-          skillLevel: skillLevel
+          skillLevel: skillLevel,
+          preferences: selectedMealPreferences
         };
         
+        console.log('Generating meal plan with request:', request);
         const meals = await generateMealPlan(request);
+        console.log('Generated meals:', meals);
         
         const weekData: WeekData = {
           planType: selectedPlanType,
@@ -289,6 +335,7 @@ export const ChatFlowContainer: React.FC = () => {
         addMessage('assistant', 'meal-plan-generated', weekData);
         addSuccessNotification('Meal plan generated successfully!');
       } catch (error) {
+        console.error('Error generating meal plan:', error);
         let errorMessage = 'Sorry, there was an error generating your meal plan.';
         
         if (error instanceof AIResponseError) {
@@ -359,17 +406,35 @@ export const ChatFlowContainer: React.FC = () => {
     
     const generateShoppingListWithRetry = async () => {
       try {
-        const shoppingListStrings = await generateShoppingList(currentWeekData.meals);
-        const shoppingList: ShoppingListItem[] = shoppingListStrings.map((itemString, index) => {
-          const parsedItem = parseItemString(itemString);
-          return {
-            id: `shopping-${index}-${Date.now()}`, // Ensure unique IDs
-            name: parsedItem.name,
-            quantity: parsedItem.quantity,
-            unit: parsedItem.unit,
-            isChecked: false
-          };
+        console.log('Generating shopping list for meals:', currentWeekData.meals);
+        const shoppingListItems = await generateShoppingList(currentWeekData.meals);
+        console.log('Generated shopping list items:', shoppingListItems);
+        
+        // Handle both string array and structured array responses
+        const shoppingList: ShoppingListItem[] = shoppingListItems.map((item, index) => {
+          if (typeof item === 'object' && item.name) {
+            // Structured item from AI
+            return {
+              id: `shopping-${index}-${Date.now()}`,
+              name: item.name,
+              quantity: item.quantity || 1,
+              unit: item.unit || 'items',
+              isChecked: false
+            };
+          } else {
+            // String item - parse it
+            const parsedItem = parseItemString(item);
+            return {
+              id: `shopping-${index}-${Date.now()}`,
+              name: parsedItem.name,
+              quantity: parsedItem.quantity,
+              unit: parsedItem.unit,
+              isChecked: false
+            };
+          }
         });
+        
+        console.log('Final shopping list:', shoppingList);
         
         const updatedWeekData = {
           ...currentWeekData,
@@ -381,6 +446,7 @@ export const ChatFlowContainer: React.FC = () => {
         addMessage('assistant', 'shopping-list-generated', updatedWeekData);
         addSuccessNotification('Shopping list generated successfully!');
       } catch (error) {
+        console.error('Error generating shopping list:', error);
         let errorMessage = 'Sorry, there was an error generating your shopping list.';
         
         if (error instanceof AIResponseError) {
@@ -493,6 +559,10 @@ export const ChatFlowContainer: React.FC = () => {
     addMessage('assistant', 'leftover-suggestions', { leftoverIngredients });
   };
 
+  const handleShareList = () => {
+    openShareWithPartnerModal();
+  };
+
   const renderQuickActions = () => {
     const hasShoppingList = currentWeekData?.shoppingList;
     const hasCompletedWeek = currentStep === 'week-complete';
@@ -585,6 +655,15 @@ export const ChatFlowContainer: React.FC = () => {
           />
         );
       
+      case 'meal-preferences':
+        return (
+          <MealPreferenceSelector
+            selectedMealsPerDay={selectedMealsPerDay}
+            selectedPreferences={selectedMealPreferences}
+            onSelectPreferences={handleMealPreferencesSelection}
+          />
+        );
+      
       case 'people-count':
         return (
           <PeopleCountSelector
@@ -618,7 +697,7 @@ export const ChatFlowContainer: React.FC = () => {
             onUpdateShoppingQuantity={handleUpdateShoppingQuantity}
             onStartWeek={handleStartWeek}
             onViewInShoppingApp={() => setCurrentView('shopping')}
-            onShareList={() => {}}
+            onShareList={handleShareList}
           />
         ) : null;
       
@@ -734,7 +813,7 @@ export const ChatFlowContainer: React.FC = () => {
     }
 
     // Handle other message types that don't need special rendering
-    if (['plan-type-selection', 'meals-per-day-selection', 'people-count-selection', 'skill-level-selection', 'custom-input'].includes(message.content)) {
+    if (['plan-type-selection', 'meals-per-day-selection', 'meal-preferences-selection', 'people-count-selection', 'skill-level-selection', 'custom-input'].includes(message.content)) {
       return null; // These are handled by the step components
     }
 

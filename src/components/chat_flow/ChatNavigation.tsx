@@ -7,7 +7,8 @@ import {
   BookOpen, 
   ShoppingCart, 
   Receipt, 
-  CheckCircle 
+  CheckCircle,
+  Coffee
 } from 'lucide-react';
 import { ChatStep, NavigationStep } from './types';
 
@@ -24,12 +25,13 @@ const NAVIGATION_STEPS: Array<{
 }> = [
   { id: 'plan-type', icon: Utensils, label: 'Meal Type', order: 1 },
   { id: 'meals-per-day', icon: Calendar, label: 'Meal Count', order: 2 },
-  { id: 'people-count', icon: Users, label: 'People Count', order: 3 },
-  { id: 'skill-level', icon: ChefHat, label: 'Cooking Level', order: 4 },
-  { id: 'menu-review', icon: BookOpen, label: 'Weekly Meals', order: 5 },
-  { id: 'shopping-list', icon: ShoppingCart, label: 'Shopping List', order: 6 },
-  { id: 'week-execution', icon: Receipt, label: 'Weekly Recipes', order: 7 },
-  { id: 'week-complete', icon: CheckCircle, label: 'End Week', order: 8 },
+  { id: 'meal-preferences', icon: Coffee, label: 'Meal Preferences', order: 3 },
+  { id: 'people-count', icon: Users, label: 'People Count', order: 4 },
+  { id: 'skill-level', icon: ChefHat, label: 'Cooking Level', order: 5 },
+  { id: 'menu-review', icon: BookOpen, label: 'Weekly Meals', order: 6 },
+  { id: 'shopping-list', icon: ShoppingCart, label: 'Shopping List', order: 7 },
+  { id: 'week-execution', icon: Receipt, label: 'Weekly Recipes', order: 8 },
+  { id: 'week-complete', icon: CheckCircle, label: 'End Week', order: 9 },
 ];
 
 export const ChatNavigation: React.FC<ChatNavigationProps> = ({ 
