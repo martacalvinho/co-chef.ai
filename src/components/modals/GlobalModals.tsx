@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store';
-import { Camera, Upload, X, Scan, Plus, Star, Check } from 'lucide-react';
+import { Camera, Upload, X, Scan, Plus, Star, Check, Mail } from 'lucide-react';
 
 // Favorite Meal Picker Modal
 interface FavoriteMealPickerProps {
@@ -86,6 +86,106 @@ const FavoriteMealPicker: React.FC<FavoriteMealPickerProps> = ({ isOpen, onClose
               Create Week from Favorites
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Share with Partner Modal
+const ShareWithPartnerModal: React.FC = () => {
+  const { shareWithPartnerModalOpen, closeShareWithPartnerModal } = useAppStore();
+  const [partnerEmail, setPartnerEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  if (!shareWithPartnerModalOpen) return null;
+
+  const handleSend = async () => {
+    if (!partnerEmail.trim()) return;
+    
+    setIsLoading(true);
+    
+    // Simulate sending email
+    setTimeout(() => {
+      alert(`Shopping list shared with ${partnerEmail}!`);
+      setPartnerEmail('');
+      setIsLoading(false);
+      closeShareWithPartnerModal();
+    }, 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">Share with Partner</h2>
+          <button
+            onClick={closeShareWithPartnerModal}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-secondary-100 rounded-full flex items-center justify-center">
+              <Mail className="w-6 h-6 text-secondary-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">Share Shopping List</h3>
+              <p className="text-sm text-gray-600">Send your shopping list to your partner via email</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Partner's Email Address
+              </label>
+              <input
+                type="email"
+                value={partnerEmail}
+                onChange={(e) => setPartnerEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="partner@example.com"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent"
+                autoFocus
+              />
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                Your partner will receive an email with the complete shopping list, including quantities and any notes you've added.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            onClick={closeShareWithPartnerModal}
+            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={!partnerEmail.trim() || isLoading}
+            className="px-4 py-2 bg-secondary-500 hover:bg-secondary-600 disabled:bg-gray-300 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Sending...</span>
+              </>
+            ) : (
+              <>
+                <Mail className="w-4 h-4" />
+                <span>Send List</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -453,6 +553,12 @@ const MealRatingModal: React.FC = () => {
     </div>
   );
 
+  const handleSave = () => {
+    // This would be passed as a callback from the parent component
+    console.log('Saving meal rating:', ratings);
+    closeMealRatingModal();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-md w-full">
@@ -525,10 +631,7 @@ const MealRatingModal: React.FC = () => {
             Skip
           </button>
           <button
-            onClick={() => {
-              console.log('Saving meal rating:', ratings);
-              closeMealRatingModal();
-            }}
+            onClick={handleSave}
             className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
           >
             Save Rating
@@ -548,6 +651,7 @@ export const GlobalModals: React.FC = () => {
       <LeftoverModal />
       <QuickAddModal />
       <MealRatingModal />
+      <ShareWithPartnerModal />
     </>
   );
 };

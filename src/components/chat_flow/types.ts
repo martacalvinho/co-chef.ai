@@ -21,7 +21,8 @@ export interface GeneratedMeal {
 export interface ShoppingListItem {
   id: string;
   name: string;
-  quantity: string;
+  quantity: number;
+  unit: string;
   isChecked: boolean;
 }
 

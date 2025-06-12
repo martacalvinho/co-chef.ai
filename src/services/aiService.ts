@@ -61,6 +61,12 @@ export interface GeneratedMeal {
   instructions: string[];
 }
 
+export interface StructuredShoppingItem {
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
 // Retry mechanism with exponential backoff
 const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
@@ -175,8 +181,8 @@ const generateAbsoluteRequirements = (planType: string): string => {
     `21. The meal name MUST clearly indicate it belongs to the "${planType}" category`,
     `22. Respect the skill level constraints for cooking time and complexity`,
     `23. Ensure proper serving sizes for the specified number of people`,
-    `24. Include detailed ingredients with specific quantities`,
-    `25. Provide clear, step-by-step cooking instructions`,
+    `24. Include VERY DETAILED ingredients with specific quantities and preparation notes`,
+    `25. Provide COMPREHENSIVE, step-by-step cooking instructions suitable for a full recipe display`,
     `26. Make the meal unique and avoid common/generic recipes`,
     `27. Ensure the meal perfectly matches the "${planType}" theme - no exceptions or compromises`
   ];
@@ -198,7 +204,7 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
     
     const absoluteRequirements = generateAbsoluteRequirements(request.planType);
     
-    const prompt = `Generate ONE meal that STRICTLY matches these requirements:
+    const prompt = `As a professional chef, generate ONE detailed meal that STRICTLY matches these requirements:
     - Plan type: "${request.planType}" (CRITICAL: The meal MUST be a ${request.planType} dish - this is NON-NEGOTIABLE)
     - For ${request.peopleCount} people
     ${skillConstraint}
@@ -209,18 +215,25 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
     ABSOLUTE REQUIREMENTS:
     ${absoluteRequirements}
     
+    CHEF'S PERSPECTIVE REQUIREMENTS:
+    - Provide VERY DETAILED ingredients with exact quantities, preparation notes, and cooking tips
+    - Include COMPREHENSIVE step-by-step instructions suitable for a complete recipe
+    - Consider cooking techniques, timing, and professional kitchen practices
+    - Ensure ingredients are realistic and available in standard grocery stores
+    - Include any special equipment or techniques needed
+    
     Return ONLY valid JSON in this exact format:
     {
       "name": "Specific meal name that clearly matches the ${request.planType} theme",
-      "description": "Brief appetizing description highlighting the ${request.planType} elements",
+      "description": "Detailed appetizing description highlighting the ${request.planType} elements and cooking techniques",
       "cookTime": 30,
       "servings": ${request.peopleCount},
       "difficulty": "Easy|Medium|Hard",
-      "ingredients": ["ingredient 1 (specific quantity for ${request.peopleCount} people)", "ingredient 2 (quantity)", "ingredient 3 (quantity)"],
-      "instructions": ["detailed step 1", "detailed step 2", "detailed step 3", "detailed step 4"]
+      "ingredients": ["ingredient 1 with exact quantity and preparation notes for ${request.peopleCount} people", "ingredient 2 with quantity and notes", "ingredient 3 with quantity and notes"],
+      "instructions": ["detailed professional step 1 with timing and technique", "detailed step 2 with cooking tips", "detailed step 3 with temperature and doneness cues", "detailed step 4 with plating and serving suggestions"]
     }
     
-    The meal MUST perfectly match "${request.planType}" theme - no exceptions.`;
+    The meal MUST perfectly match "${request.planType}" theme with restaurant-quality detail.`;
 
     console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - OpenAI instance baseURL:', openai.baseURL);
@@ -228,7 +241,7 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
       model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 2000,
     });
 
     const response = completion.choices[0].message.content;
@@ -254,7 +267,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     const totalMeals = request.mealsPerDay * 7;
     const absoluteRequirements = generateAbsoluteRequirements(request.planType);
     
-    const prompt = `Generate a weekly meal plan with STRICT adherence to these requirements:
+    const prompt = `As a professional chef, generate a weekly meal plan with STRICT adherence to these requirements:
     - Plan type: "${request.planType}" (CRITICAL: ALL ${totalMeals} meals MUST be ${request.planType} dishes)
     - ${request.mealsPerDay} meals per day for 7 days (total: ${totalMeals} meals)
     - For ${request.peopleCount} people
@@ -265,6 +278,13 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     
     ABSOLUTE REQUIREMENTS:
     ${absoluteRequirements}
+    
+    CHEF'S PERSPECTIVE REQUIREMENTS:
+    - Provide VERY DETAILED ingredients with exact quantities, preparation notes, and cooking tips for each meal
+    - Include COMPREHENSIVE step-by-step instructions suitable for complete recipes
+    - Consider cooking techniques, timing, and professional kitchen practices
+    - Ensure ingredients are realistic and available in standard grocery stores
+    - Include any special equipment or techniques needed
     
     ADDITIONAL REQUIREMENTS FOR WEEKLY PLANS:
     - Generate ${totalMeals} COMPLETELY DIFFERENT meals - no repetition
@@ -277,17 +297,17 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
       "meals": [
         {
           "name": "Unique meal name matching ${request.planType} theme",
-          "description": "Brief description highlighting ${request.planType} elements",
+          "description": "Detailed description highlighting ${request.planType} elements and cooking techniques",
           "cookTime": 30,
           "servings": ${request.peopleCount},
           "difficulty": "Easy|Medium|Hard",
-          "ingredients": ["ingredient 1 (quantity)", "ingredient 2 (quantity)", "ingredient 3 (quantity)"],
-          "instructions": ["step 1", "step 2", "step 3"]
+          "ingredients": ["ingredient 1 with exact quantity and preparation notes", "ingredient 2 with quantity and notes", "ingredient 3 with quantity and notes"],
+          "instructions": ["detailed professional step 1 with timing and technique", "detailed step 2 with cooking tips", "detailed step 3 with temperature cues"]
         }
       ]
     }
     
-    Generate exactly ${totalMeals} unique meals, all matching "${request.planType}" theme perfectly.`;
+    Generate exactly ${totalMeals} unique meals, all matching "${request.planType}" theme with restaurant-quality detail.`;
 
     console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - OpenAI instance baseURL:', openai.baseURL);
@@ -295,7 +315,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
       model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 6000,
     });
 
     const response = completion.choices[0].message.content;
@@ -325,7 +345,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
   });
 };
 
-export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<string[]> => {
+export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<StructuredShoppingItem[]> => {
   // Check API key before making request
   if (!apiKey) {
     throw new AIResponseError('API key not configured. Please check your environment variables.');
@@ -336,19 +356,30 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<stri
     const allIngredients = meals.flatMap(meal => meal.ingredients);
     const ingredientText = allIngredients.join(', ');
     
-    const prompt = `Given these ingredients from ${meals.length} meals in a weekly meal plan: ${ingredientText}
+    const prompt = `As a professional chef analyzing these ingredients from ${meals.length} meals in a weekly meal plan: ${ingredientText}
     
-    Create a consolidated shopping list that:
-    1. Combines similar ingredients with realistic total quantities needed
-    2. Groups by category (produce, meat, dairy, pantry, etc.)
-    3. Includes proper amounts for all the meals
-    4. Removes duplicates and consolidates quantities
-    5. Uses standard shopping quantities (e.g., "2 lbs ground beef" not "ground beef")
-    6. Accounts for typical package sizes available in stores
+    Create a consolidated shopping list from a CHEF'S PERSPECTIVE that:
+    1. Combines similar ingredients with realistic total quantities needed for ALL meals
+    2. Considers typical package sizes available in grocery stores (e.g., if you need 1/2 cup olive oil, you buy a full bottle)
+    3. Accounts for cooking losses, prep waste, and practical portions
+    4. Groups by category (produce, meat, dairy, pantry, etc.)
+    5. Uses standard shopping quantities and units
+    6. Consolidates duplicates intelligently (e.g., "2 lbs ground beef" not separate entries)
+    7. Considers that users may already have basic pantry staples at home
     
-    Return ONLY valid JSON format: {"items": ["2 lbs ground beef", "1 box spaghetti (16 oz)", "1 jar marinara sauce (24 oz)"]}
+    CRITICAL: Return structured JSON with name, quantity (as number), and unit for each item:
     
-    Make sure to include ALL ingredients needed for the ${meals.length} meals with appropriate consolidated quantities.`;
+    {
+      "items": [
+        {"name": "ground beef", "quantity": 2, "unit": "lbs"},
+        {"name": "spaghetti pasta", "quantity": 1, "unit": "box"},
+        {"name": "marinara sauce", "quantity": 2, "unit": "jars"},
+        {"name": "olive oil", "quantity": 1, "unit": "bottle"},
+        {"name": "yellow onions", "quantity": 3, "unit": "lbs"}
+      ]
+    }
+    
+    Make sure to include ALL ingredients needed for the ${meals.length} meals with appropriate consolidated quantities that account for typical package sizes and cooking needs.`;
 
     console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - OpenAI instance baseURL:', openai.baseURL);
@@ -356,7 +387,7 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<stri
       model: "mistralai/mistral-small-3.1-24b-instruct:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 3000,
     });
 
     const response = completion.choices[0].message.content;
@@ -370,6 +401,58 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<stri
       throw new Error('Invalid shopping list response structure');
     }
     
-    return parsed.items;
+    // Validate and structure the items
+    const structuredItems: StructuredShoppingItem[] = parsed.items.map((item: any, index: number) => {
+      if (!item.name || typeof item.quantity !== 'number' || !item.unit) {
+        throw new Error(`Invalid shopping item at index ${index}: missing name, quantity, or unit`);
+      }
+      
+      return {
+        name: item.name,
+        quantity: Math.max(0, item.quantity), // Ensure positive quantity
+        unit: item.unit
+      };
+    });
+    
+    return structuredItems;
   });
+};
+
+// Fallback function for shopping list generation
+const generateShoppingListFallback = (meals: GeneratedMeal[]): StructuredShoppingItem[] => {
+  const ingredientCounts: Record<string, { count: number; unit: string }> = {};
+  
+  // Count ingredient occurrences and extract units
+  meals.forEach(meal => {
+    meal.ingredients.forEach(ingredient => {
+      // Try to extract quantity and unit from ingredient string
+      const match = ingredient.match(/^(\d+(?:\.\d+)?)\s*(\w+)\s+(.+)$/);
+      if (match) {
+        const [, quantityStr, unit, name] = match;
+        const quantity = parseFloat(quantityStr);
+        const cleanName = name.trim().toLowerCase();
+        
+        if (ingredientCounts[cleanName]) {
+          ingredientCounts[cleanName].count += quantity;
+        } else {
+          ingredientCounts[cleanName] = { count: quantity, unit };
+        }
+      } else {
+        // Fallback for ingredients without clear quantity/unit
+        const cleanName = ingredient.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+        if (ingredientCounts[cleanName]) {
+          ingredientCounts[cleanName].count += 1;
+        } else {
+          ingredientCounts[cleanName] = { count: 1, unit: 'item' };
+        }
+      }
+    });
+  });
+  
+  // Convert to structured shopping list
+  return Object.entries(ingredientCounts).map(([name, data]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize first letter
+    quantity: Math.ceil(data.count), // Round up to ensure enough
+    unit: data.unit
+  }));
 };

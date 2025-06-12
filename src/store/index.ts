@@ -37,6 +37,7 @@ interface AppState {
   leftoverModalOpen: boolean;
   quickAddModalOpen: boolean;
   mealRatingModalOpen: boolean;
+  shareWithPartnerModalOpen: boolean;
   
   // Actions
   setCurrentView: (view: 'chat' | 'menus' | 'shopping') => void;
@@ -60,6 +61,8 @@ interface AppState {
   closeQuickAddModal: () => void;
   openMealRatingModal: () => void;
   closeMealRatingModal: () => void;
+  openShareWithPartnerModal: () => void;
+  closeShareWithPartnerModal: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -140,6 +143,7 @@ export const useAppStore = create<AppState>((set) => ({
   leftoverModalOpen: false,
   quickAddModalOpen: false,
   mealRatingModalOpen: false,
+  shareWithPartnerModalOpen: false,
   
   setCurrentView: (view) => set({ currentView: view }),
   addSavedMenu: (menu) => set((state) => ({ 
@@ -178,4 +182,6 @@ export const useAppStore = create<AppState>((set) => ({
   closeQuickAddModal: () => set({ quickAddModalOpen: false }),
   openMealRatingModal: () => set({ mealRatingModalOpen: true }),
   closeMealRatingModal: () => set({ mealRatingModalOpen: false }),
+  openShareWithPartnerModal: () => set({ shareWithPartnerModalOpen: true }),
+  closeShareWithPartnerModal: () => set({ shareWithPartnerModalOpen: false }),
 }));
