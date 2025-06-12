@@ -596,6 +596,36 @@ export const ChatFlowContainer: React.FC = () => {
     }
   };
 
+  // NEW: Handle manual END WEEK functionality
+  const handleEndWeek = () => {
+    if (!currentWeekData) return;
+
+    // Calculate completion stats
+    const avgRating = Object.values(mealRatings).reduce((sum: number, r: any) => sum + r.rating, 0) / Object.keys(mealRatings).length;
+    const totalCalories = currentWeekData.meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+    const allIngredients = currentWeekData.meals.flatMap(meal => meal.ingredients);
+    const uniqueIngredients = [...new Set(allIngredients)];
+    setLeftoverIngredients(uniqueIngredients);
+
+    // Update week data with completion info
+    const updatedWeekData = {
+      ...currentWeekData,
+      weekEndDate: new Date().toISOString(),
+      completionRate: Math.round((completedMeals.size / currentWeekData.meals.length) * 100),
+      averageRating: avgRating || 0,
+      totalCalories
+    };
+
+    setCurrentWeekData(updatedWeekData);
+    setCurrentStep('week-complete');
+    addMessage('assistant', 'week-complete', {
+      weekData: updatedWeekData,
+      ratings: mealRatings,
+      completedCount: completedMeals.size,
+      leftoverIngredients: uniqueIngredients
+    });
+  };
+
   const handleSaveWeek = () => {
     if (currentWeekData) {
       const weekTitle = `Week of ${new Date(currentWeekData.weekStartDate).toLocaleDateString()}`;
@@ -606,13 +636,30 @@ export const ChatFlowContainer: React.FC = () => {
         const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
         return `${days[dayIndex]} ${mealTypes[mealTypeIndex]}: ${meal.name}`;
       });
+
+      // Calculate final stats
+      const avgRating = Object.values(mealRatings).reduce((sum: number, r: any) => sum + r.rating, 0) / Object.keys(mealRatings).length;
+      const totalCalories = currentWeekData.meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+      const completionRate = Math.round((completedMeals.size / currentWeekData.meals.length) * 100);
       
       addSavedMenu({
         id: `saved-${Date.now()}`, // Ensure unique ID
         title: weekTitle,
         meals: mealsList,
         createdAt: new Date(),
-        isFavorite: false
+        isFavorite: false,
+        weekData: {
+          planType: currentWeekData.planType,
+          mealsPerDay: currentWeekData.mealsPerDay,
+          peopleCount: currentWeekData.peopleCount,
+          skillLevel: currentWeekData.skillLevel,
+          weekStartDate: currentWeekData.weekStartDate,
+          weekEndDate: currentWeekData.weekEndDate || new Date().toISOString(),
+          completionRate,
+          averageRating: avgRating || 0,
+          totalCalories,
+          mealRatings
+        }
       });
       
       addSuccessNotification('Week saved to history successfully!');
@@ -820,6 +867,7 @@ export const ChatFlowContainer: React.FC = () => {
             viewingRecipe={viewingRecipe}
             onSetViewingRecipe={setViewingRecipe}
             onRecipeConfirm={handleRecipeConfirm}
+            onEndWeek={handleEndWeek} // Pass the END WEEK handler
           />
         ) : null;
       

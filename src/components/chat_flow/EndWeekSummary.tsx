@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Star, Calendar, Heart } from 'lucide-react';
+import { Check, Star, Calendar, Heart, Zap, TrendingUp } from 'lucide-react';
 import { WeekData } from './types';
 
 interface EndWeekSummaryProps {
@@ -24,6 +24,9 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
   onCreateFromFavorites
 }) => {
   const avgRating = Object.values(ratings).reduce((sum: number, r: any) => sum + r.rating, 0) / Object.keys(ratings).length;
+  const completionRate = Math.round((completedCount / weekData.meals.length) * 100);
+  const totalCalories = weekData.meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+  const avgCaloriesPerDay = Math.round(totalCalories / 7);
   
   return (
     <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200 p-6">
@@ -33,10 +36,10 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">Week Complete! 🎉</h3>
         <p className="text-gray-700 mb-4">
-          You completed {completedCount} meals with an average rating of {avgRating.toFixed(1)} stars!
+          You completed {completedCount} of {weekData.meals.length} meals ({completionRate}% completion rate) with an average rating of {avgRating.toFixed(1)} stars!
         </p>
         
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">{completedCount}</div>
             <div className="text-sm text-gray-600">Meals Completed</div>
@@ -46,8 +49,30 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
             <div className="text-sm text-gray-600">Avg Rating</div>
           </div>
           <div className="text-center">
+            <div className="text-2xl font-bold text-orange-600">{totalCalories.toLocaleString()}</div>
+            <div className="text-sm text-gray-600">Total Calories</div>
+          </div>
+          <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">{leftoverIngredients.length}</div>
             <div className="text-sm text-gray-600">Leftover Items</div>
+          </div>
+        </div>
+
+        {/* Nutrition Summary */}
+        <div className="bg-orange-50 rounded-lg p-4 mb-6">
+          <h4 className="font-medium text-orange-900 mb-2 flex items-center justify-center space-x-2">
+            <Zap className="w-4 h-4" />
+            <span>Weekly Nutrition Summary</span>
+          </h4>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-orange-700">Average per day:</span>
+              <span className="font-medium text-orange-900 ml-2">{avgCaloriesPerDay} calories</span>
+            </div>
+            <div>
+              <span className="text-orange-700">Total week:</span>
+              <span className="font-medium text-orange-900 ml-2">{totalCalories.toLocaleString()} calories</span>
+            </div>
           </div>
         </div>
         
@@ -75,7 +100,10 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
         
         {/* Enhanced End Week Message */}
         <div className="bg-white rounded-lg p-6 mb-6 text-left">
-          <h4 className="font-semibold text-gray-900 mb-3">Your meal plan has been completed!</h4>
+          <h4 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+            <TrendingUp className="w-5 h-5 text-primary-500" />
+            <span>Your meal plan has been completed!</span>
+          </h4>
           <p className="text-gray-700 mb-4">You can now:</p>
           <ul className="space-y-2 text-gray-700 mb-4">
             <li className="flex items-center space-x-2">
@@ -89,6 +117,10 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
             <li className="flex items-center space-x-2">
               <Heart className="w-4 h-4 text-red-500" />
               <span>Select favorite meals from this and other weeks to create a new plan</span>
+            </li>
+            <li className="flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-orange-500" />
+              <span>Review nutrition data and meal ratings for insights</span>
             </li>
           </ul>
         </div>
@@ -112,7 +144,7 @@ export const EndWeekSummary: React.FC<EndWeekSummaryProps> = ({
           </div>
           
           <p className="text-sm text-gray-600">
-            Saving to history allows you to reuse this menu or pick favorite meals from it in the future.
+            Saving to history allows you to reuse this menu, analyze nutrition patterns, and pick favorite meals for future weeks.
           </p>
           
           <button

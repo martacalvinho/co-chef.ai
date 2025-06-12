@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Clock, RefreshCw, Check, Share } from 'lucide-react';
+import { Users, Clock, RefreshCw, Check, Share, Zap } from 'lucide-react';
 import { WeekData } from './types';
 
 interface WeeklyMealOptionsProps {
@@ -20,6 +20,10 @@ export const WeeklyMealOptions: React.FC<WeeklyMealOptionsProps> = ({
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   };
 
+  // Calculate total calories for the week
+  const totalWeeklyCalories = weekData.meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+  const avgCaloriesPerMeal = Math.round(totalWeeklyCalories / weekData.meals.length);
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -33,6 +37,10 @@ export const WeeklyMealOptions: React.FC<WeeklyMealOptionsProps> = ({
                 <span>{weekData.peopleCount} people</span>
               </span>
               <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">{weekData.skillLevel}</span>
+              <span className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                <Zap className="w-3 h-3" />
+                <span>{totalWeeklyCalories.toLocaleString()} cal/week</span>
+              </span>
             </div>
           </div>
           <button
@@ -45,7 +53,7 @@ export const WeeklyMealOptions: React.FC<WeeklyMealOptionsProps> = ({
         </div>
 
         <p className="text-gray-700 mb-4">
-          Here's a weekly meal plan with {weekData.mealsPerDay} meal{weekData.mealsPerDay > 1 ? 's' : ''} per day for {weekData.peopleCount} people, focused on {weekData.planType} at {weekData.skillLevel.toLowerCase()} difficulty. You can refresh individual meals if you don't like them, then accept to generate your shopping list:
+          Here's a weekly meal plan with {weekData.mealsPerDay} meal{weekData.mealsPerDay > 1 ? 's' : ''} per day for {weekData.peopleCount} people, focused on {weekData.planType} at {weekData.skillLevel.toLowerCase()} difficulty. Average {avgCaloriesPerMeal} calories per meal. You can refresh individual meals if you don't like them, then accept to generate your shopping list:
         </p>
 
         <div className="space-y-3">
@@ -79,6 +87,10 @@ export const WeeklyMealOptions: React.FC<WeeklyMealOptionsProps> = ({
                         <span>{meal.cookTime}min</span>
                       </span>
                       <span>{meal.servings} servings</span>
+                      <span className="flex items-center space-x-1 bg-orange-50 text-orange-600 px-2 py-1 rounded">
+                        <Zap className="w-3 h-3" />
+                        <span>{meal.calories} cal</span>
+                      </span>
                       <span className={`px-2 py-1 rounded ${
                         meal.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
                         meal.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :

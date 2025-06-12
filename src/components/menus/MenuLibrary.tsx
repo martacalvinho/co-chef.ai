@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Heart, Copy, Trash2, Plus, Search, RefreshCw, Calendar, Check } from 'lucide-react';
+import { ArrowLeft, Heart, Copy, Trash2, Plus, Search, RefreshCw, Calendar, Check, Star, Zap, TrendingUp, Users } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { FavoriteMealPicker } from '../modals/GlobalModals';
 
@@ -21,18 +21,19 @@ export const MenuLibrary: React.FC = () => {
   const handleReuseMenu = (menu: any) => {
     // Save the menu data to localStorage for the chat interface to pick up
     const weekData = {
-      planType: 'reused menu',
-      mealsPerDay: 1,
-      peopleCount: 2,
-      skillLevel: 'Medium',
+      planType: menu.weekData?.planType || 'reused menu',
+      mealsPerDay: menu.weekData?.mealsPerDay || 1,
+      peopleCount: menu.weekData?.peopleCount || 2,
+      skillLevel: menu.weekData?.skillLevel || 'Medium',
       meals: menu.meals.map((meal: string) => ({
         name: meal.split(': ')[1] || meal,
         description: 'Reused from saved menu',
         cookTime: 30,
-        servings: 2,
-        difficulty: 'Medium',
+        servings: menu.weekData?.peopleCount || 2,
+        difficulty: menu.weekData?.skillLevel || 'Medium',
         ingredients: ['Various ingredients'],
-        instructions: ['Follow original recipe']
+        instructions: ['Follow original recipe'],
+        calories: 450 // Default calories
       })),
       weekStartDate: new Date().toISOString()
     };
@@ -40,10 +41,10 @@ export const MenuLibrary: React.FC = () => {
     const dataToSave = {
       weekData,
       step: 'menu-review',
-      selectedPlanType: 'reused menu',
-      selectedMealsPerDay: 1,
-      selectedPeopleCount: 2,
-      selectedSkillLevel: 'Medium',
+      selectedPlanType: menu.weekData?.planType || 'reused menu',
+      selectedMealsPerDay: menu.weekData?.mealsPerDay || 1,
+      selectedPeopleCount: menu.weekData?.peopleCount || 2,
+      selectedSkillLevel: menu.weekData?.skillLevel || 'Medium',
       completedMeals: [],
       mealRatings: {},
       leftoverIngredients: [],
@@ -97,8 +98,8 @@ export const MenuLibrary: React.FC = () => {
           />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Enhanced Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg border border-gray-200 text-center">
             <div className="text-2xl font-bold text-primary-600">{savedMenus.length}</div>
             <div className="text-sm text-gray-600">Total Weeks</div>
@@ -110,6 +111,12 @@ export const MenuLibrary: React.FC = () => {
           <div className="bg-white p-4 rounded-lg border border-gray-200 text-center">
             <div className="text-2xl font-bold text-green-600">{savedMenus.reduce((sum, menu) => sum + menu.meals.length, 0)}</div>
             <div className="text-sm text-gray-600">Total Meals</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {savedMenus.reduce((sum, menu) => sum + (menu.weekData?.totalCalories || 0), 0).toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600">Total Calories</div>
           </div>
         </div>
 
@@ -125,10 +132,37 @@ export const MenuLibrary: React.FC = () => {
                       <Heart className="w-4 h-4 text-red-500 fill-current" />
                     )}
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
                     <span>{menu.createdAt.toLocaleDateString()}</span>
                     <span>{menu.meals.length} meals</span>
+                    {menu.weekData?.planType && (
+                      <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs">
+                        {menu.weekData.planType}
+                      </span>
+                    )}
                   </div>
+                  
+                  {/* Enhanced Week Data Display */}
+                  {menu.weekData && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                      <div className="flex items-center space-x-1 text-xs text-gray-600">
+                        <TrendingUp className="w-3 h-3" />
+                        <span>{menu.weekData.completionRate || 0}% complete</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-xs text-gray-600">
+                        <Star className="w-3 h-3 text-yellow-500" />
+                        <span>{(menu.weekData.averageRating || 0).toFixed(1)} avg rating</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-xs text-gray-600">
+                        <Zap className="w-3 h-3 text-orange-500" />
+                        <span>{(menu.weekData.totalCalories || 0).toLocaleString()} cal</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-xs text-gray-600">
+                        <Users className="w-3 h-3" />
+                        <span>{menu.weekData.peopleCount || 2} people</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-1">
                   <button
@@ -168,8 +202,15 @@ export const MenuLibrary: React.FC = () => {
               
               <div className="space-y-1">
                 {menu.meals.map((meal, index) => (
-                  <div key={index} className="text-sm text-gray-700 py-1 border-b border-gray-100 last:border-b-0">
-                    {meal}
+                  <div key={index} className="text-sm text-gray-700 py-1 border-b border-gray-100 last:border-b-0 flex items-center justify-between">
+                    <span>{meal}</span>
+                    {menu.weekData?.mealRatings?.[index] && (
+                      <div className="flex items-center space-x-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < menu.weekData.mealRatings[index].rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

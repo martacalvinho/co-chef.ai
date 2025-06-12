@@ -6,6 +6,10 @@ export interface WeekData {
   meals: GeneratedMeal[];
   shoppingList?: ShoppingListItem[];
   weekStartDate: string;
+  weekEndDate?: string;
+  completionRate?: number;
+  averageRating?: number;
+  totalCalories?: number;
 }
 
 export interface GeneratedMeal {
@@ -16,6 +20,7 @@ export interface GeneratedMeal {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   ingredients: string[];
   instructions: string[];
+  calories: number; // Added calories field
 }
 
 export interface ShoppingListItem {

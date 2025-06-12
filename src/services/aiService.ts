@@ -59,6 +59,7 @@ export interface GeneratedMeal {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   ingredients: string[];
   instructions: string[];
+  calories: number; // Added calories field
 }
 
 export interface StructuredShoppingItem {
@@ -132,7 +133,7 @@ const parseAIResponse = (response: string): any => {
 
 // Validation functions
 const validateGeneratedMeal = (meal: any): GeneratedMeal => {
-  const requiredFields = ['name', 'description', 'cookTime', 'servings', 'difficulty', 'ingredients', 'instructions'];
+  const requiredFields = ['name', 'description', 'cookTime', 'servings', 'difficulty', 'ingredients', 'instructions', 'calories'];
   
   for (const field of requiredFields) {
     if (!meal[field]) {
@@ -150,6 +151,10 @@ const validateGeneratedMeal = (meal: any): GeneratedMeal => {
   
   if (!['Easy', 'Medium', 'Hard'].includes(meal.difficulty)) {
     throw new Error('Invalid difficulty level');
+  }
+
+  if (typeof meal.calories !== 'number' || meal.calories <= 0) {
+    throw new Error('Calories must be a positive number');
   }
   
   return meal as GeneratedMeal;
@@ -184,7 +189,8 @@ const generateAbsoluteRequirements = (planType: string): string => {
     `24. Include VERY DETAILED ingredients with specific quantities and preparation notes`,
     `25. Provide COMPREHENSIVE, step-by-step cooking instructions suitable for a full recipe display`,
     `26. Make the meal unique and avoid common/generic recipes`,
-    `27. Ensure the meal perfectly matches the "${planType}" theme - no exceptions or compromises`
+    `27. Ensure the meal perfectly matches the "${planType}" theme - no exceptions or compromises`,
+    `28. CRITICAL: Calculate accurate calories per serving based on ingredients and portions`
   ];
   
   return requirements.join('\n    ');
@@ -192,7 +198,7 @@ const generateAbsoluteRequirements = (planType: string): string => {
 
 export const generateSingleMeal = async (request: MealPlanRequest): Promise<GeneratedMeal> => {
   console.log('[AI_SERVICE_DEBUG] generateSingleMeal called. Using API Key (first 10 chars):', apiKey ? apiKey.substring(0, 10) + '...' : 'API_KEY_IS_UNDEFINED_OR_EMPTY');
-  console.log('[AI_SERVICE_DEBUG] Model for API call:', "mistralai/mistral-small-3.1-24b-instruct:free");
+  console.log('[AI_SERVICE_DEBUG] Model for API call:', "google/gemma-3n-e4b-it:free");
   // Check API key before making request
   if (!apiKey) {
     throw new AIResponseError('API key not configured. Please check your environment variables.');
@@ -204,7 +210,7 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
     
     const absoluteRequirements = generateAbsoluteRequirements(request.planType);
     
-    const prompt = `As a professional chef, generate ONE detailed meal that STRICTLY matches these requirements:
+    const prompt = `As a professional chef and nutritionist, generate ONE detailed meal that STRICTLY matches these requirements:
     - Plan type: "${request.planType}" (CRITICAL: The meal MUST be a ${request.planType} dish - this is NON-NEGOTIABLE)
     - For ${request.peopleCount} people
     ${skillConstraint}
@@ -221,6 +227,7 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
     - Consider cooking techniques, timing, and professional kitchen practices
     - Ensure ingredients are realistic and available in standard grocery stores
     - Include any special equipment or techniques needed
+    - CALCULATE ACCURATE CALORIES per serving based on ingredients and portions
     
     Return ONLY valid JSON in this exact format:
     {
@@ -229,16 +236,17 @@ export const generateSingleMeal = async (request: MealPlanRequest): Promise<Gene
       "cookTime": 30,
       "servings": ${request.peopleCount},
       "difficulty": "Easy|Medium|Hard",
+      "calories": 450,
       "ingredients": ["ingredient 1 with exact quantity and preparation notes for ${request.peopleCount} people", "ingredient 2 with quantity and notes", "ingredient 3 with quantity and notes"],
       "instructions": ["detailed professional step 1 with timing and technique", "detailed step 2 with cooking tips", "detailed step 3 with temperature and doneness cues", "detailed step 4 with plating and serving suggestions"]
     }
     
-    The meal MUST perfectly match "${request.planType}" theme with restaurant-quality detail.`;
+    The meal MUST perfectly match "${request.planType}" theme with restaurant-quality detail and accurate calorie calculation.`;
 
     console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateSingleMeal - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "mistralai/mistral-small-3.1-24b-instruct:free",
+      model: "google/gemma-3n-e4b-it:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
       max_tokens: 2000,
@@ -273,7 +281,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     const mealPreferencesConstraint = request.preferences?.length ? 
       `- Meal types to generate: ${request.preferences.join(', ')} (CRITICAL: Only generate these specific meal types)` : '';
     
-    const prompt = `As a professional chef, generate a weekly meal plan with STRICT adherence to these requirements:
+    const prompt = `As a professional chef and nutritionist, generate a weekly meal plan with STRICT adherence to these requirements:
     - Plan type: "${request.planType}" (CRITICAL: ALL ${totalMeals} meals MUST be ${request.planType} dishes)
     - ${request.mealsPerDay} meals per day for 7 days (total: ${totalMeals} meals)
     - For ${request.peopleCount} people
@@ -291,6 +299,7 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
     - Consider cooking techniques, timing, and professional kitchen practices
     - Ensure ingredients are realistic and available in standard grocery stores
     - Include any special equipment or techniques needed
+    - CALCULATE ACCURATE CALORIES per serving for each meal based on ingredients and portions
     
     ADDITIONAL REQUIREMENTS FOR WEEKLY PLANS:
     - Generate ${totalMeals} COMPLETELY DIFFERENT meals - no repetition
@@ -308,18 +317,19 @@ export const generateMealPlan = async (request: MealPlanRequest): Promise<Genera
           "cookTime": 30,
           "servings": ${request.peopleCount},
           "difficulty": "Easy|Medium|Hard",
+          "calories": 450,
           "ingredients": ["ingredient 1 with exact quantity and preparation notes", "ingredient 2 with quantity and notes", "ingredient 3 with quantity and notes"],
           "instructions": ["detailed professional step 1 with timing and technique", "detailed step 2 with cooking tips", "detailed step 3 with temperature cues"]
         }
       ]
     }
     
-    Generate exactly ${totalMeals} unique meals, all matching "${request.planType}" theme with restaurant-quality detail.`;
+    Generate exactly ${totalMeals} unique meals, all matching "${request.planType}" theme with restaurant-quality detail and accurate calorie calculations.`;
 
     console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateMealPlan - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "mistralai/mistral-small-3.1-24b-instruct:free",
+      model: "google/gemma-3n-e4b-it:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.7,
       max_tokens: 6000,
@@ -399,7 +409,7 @@ export const generateShoppingList = async (meals: GeneratedMeal[]): Promise<Stru
     console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - Before API call. OpenAI instance apiKey (first 10):', openai.apiKey?.substring(0,10)+'...');
     console.log('[AI_SERVICE_CALL_DEBUG] In generateShoppingList - OpenAI instance baseURL:', openai.baseURL);
     const completion = await openai.chat.completions.create({
-      model: "mistralai/mistral-small-3.1-24b-instruct:free",
+      model: "google/gemma-3n-e4b-it:free",
       messages: [{ "role": "user", "content": prompt }],
       temperature: 0.3,
       max_tokens: 3000,
