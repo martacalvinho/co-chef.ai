@@ -4,7 +4,7 @@ import { WeekData } from './types';
 
 interface ShoppingListDisplayProps {
   weekData: WeekData;
-  onUpdateShoppingQuantity: (itemId: string, newQuantity: string, newUnit?: string) => void;
+  onUpdateShoppingQuantity: (itemId: string, newQuantity: number, newUnit?: string) => void;
   onStartWeek: () => void;
   onViewInShoppingApp: () => void;
   onShareList: () => void;
@@ -100,24 +100,21 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
   const [isMetric, setIsMetric] = useState(false);
   const [newItem, setNewItem] = useState('');
 
-  const handleQuantityChange = (itemId: string, newQuantity: string, currentUnit: string) => {
+  const handleQuantityChange = (itemId: string, newQuantity: number, currentUnit: string) => {
     // Ensure quantity is a valid number and not negative
-    const parsedQuantity = parseFloat(newQuantity) || 0;
-    const validQuantity = Math.max(0, parsedQuantity);
-    onUpdateShoppingQuantity(itemId, validQuantity.toString(), currentUnit);
+    const validQuantity = Math.max(0, newQuantity);
+    onUpdateShoppingQuantity(itemId, validQuantity, currentUnit);
   };
 
-  const handleIncrement = (itemId: string, currentQuantity: string, currentUnit: string) => {
-    const current = parseFloat(currentQuantity) || 0;
-    const increment = current < 1 ? 0.25 : current < 5 ? 0.5 : 1; // Smart increment
-    handleQuantityChange(itemId, (current + increment).toString(), currentUnit);
+  const handleIncrement = (itemId: string, currentQuantity: number, currentUnit: string) => {
+    const increment = currentQuantity < 1 ? 0.25 : currentQuantity < 5 ? 0.5 : 1; // Smart increment
+    handleQuantityChange(itemId, currentQuantity + increment, currentUnit);
   };
 
-  const handleDecrement = (itemId: string, currentQuantity: string, currentUnit: string) => {
-    const current = parseFloat(currentQuantity) || 0;
-    const decrement = current <= 1 ? 0.25 : current <= 5 ? 0.5 : 1; // Smart decrement
-    const newQuantity = Math.max(0, current - decrement);
-    handleQuantityChange(itemId, newQuantity.toString(), currentUnit);
+  const handleDecrement = (itemId: string, currentQuantity: number, currentUnit: string) => {
+    const decrement = currentQuantity <= 1 ? 0.25 : currentQuantity <= 5 ? 0.5 : 1; // Smart decrement
+    const newQuantity = Math.max(0, currentQuantity - decrement);
+    handleQuantityChange(itemId, newQuantity, currentUnit);
   };
 
   const handleToggleHaveAtHome = (itemId: string) => {
@@ -147,7 +144,7 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
     return weekData.shoppingList.reduce((total, item) => {
       if (item.isChecked) return total; // Skip items they have at home
       
-      const quantity = parseFloat(item.quantity.toString()) || 0;
+      const quantity = typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity.toString()) || 0;
       const estimatedUnitPrice = 3.50; // Placeholder unit price
       return total + (quantity * estimatedUnitPrice);
     }, 0);
@@ -209,7 +206,7 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
         
         <div className="space-y-3 mb-6">
           {weekData.shoppingList?.map((item, index) => {
-            const quantity = parseFloat(item.quantity.toString()) || 0;
+            const quantity = typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity.toString()) || 0;
             const displayQuantityUnit = getDisplayQuantityAndUnit(quantity, item.unit || 'items');
             
             return (
@@ -237,7 +234,7 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
                 {/* Quantity Controls */}
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => handleDecrement(item.id, item.quantity.toString(), item.unit || 'items')}
+                    onClick={() => handleDecrement(item.id, quantity, item.unit || 'items')}
                     className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
                     disabled={quantity <= 0}
                   >
@@ -250,7 +247,7 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
                       min="0"
                       step="0.25"
                       value={quantity}
-                      onChange={(e) => handleQuantityChange(item.id, e.target.value, item.unit || 'items')}
+                      onChange={(e) => handleQuantityChange(item.id, parseFloat(e.target.value) || 0, item.unit || 'items')}
                       className="w-16 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                     />
                     <div className="text-xs text-gray-500 mt-1">
@@ -259,7 +256,7 @@ export const ShoppingListDisplay: React.FC<ShoppingListDisplayProps> = ({
                   </div>
                   
                   <button
-                    onClick={() => handleIncrement(item.id, item.quantity.toString(), item.unit || 'items')}
+                    onClick={() => handleIncrement(item.id, quantity, item.unit || 'items')}
                     className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
                   >
                     <Plus className="w-4 h-4 text-gray-600" />

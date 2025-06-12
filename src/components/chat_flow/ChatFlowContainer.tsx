@@ -23,6 +23,32 @@ interface Message {
   retryAction?: () => void;
 }
 
+// Smart item parsing function
+const parseItemString = (itemString: string): { name: string; quantity: number; unit: string } => {
+  // Common patterns: "2 lbs ground beef", "1 cup flour", "3 large eggs"
+  const patterns = [
+    /^(\d+(?:\.\d+)?)\s+(lbs?|pounds?|kg|kilograms?)\s+(.+)$/i,
+    /^(\d+(?:\.\d+)?)\s+(oz|ounces?|g|grams?)\s+(.+)$/i,
+    /^(\d+(?:\.\d+)?)\s+(cups?|tbsp|tablespoons?|tsp|teaspoons?|ml|l|liters?)\s+(.+)$/i,
+    /^(\d+(?:\.\d+)?)\s+(items?|pieces?|cloves?|heads?|bunches?)\s+(.+)$/i,
+    /^(\d+(?:\.\d+)?)\s+(cans?|jars?|bottles?|boxes?|packages?)\s+(.+)$/i,
+    /^(\d+(?:\.\d+)?)\s+(.+)$/i // Fallback: number + name
+  ];
+  
+  for (const pattern of patterns) {
+    const match = itemString.match(pattern);
+    if (match) {
+      const quantity = parseFloat(match[1]);
+      const unit = match[2] || 'items';
+      const name = match[3] || match[2]; // For fallback pattern
+      return { name: name.trim(), quantity, unit: unit.toLowerCase() };
+    }
+  }
+  
+  // If no pattern matches, treat as single item
+  return { name: itemString.trim(), quantity: 1, unit: 'items' };
+};
+
 export const ChatFlowContainer: React.FC = () => {
   const { setCurrentView, addSavedMenu } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -334,12 +360,16 @@ export const ChatFlowContainer: React.FC = () => {
     const generateShoppingListWithRetry = async () => {
       try {
         const shoppingListStrings = await generateShoppingList(currentWeekData.meals);
-        const shoppingList: ShoppingListItem[] = shoppingListStrings.map((item, index) => ({
-          id: `shopping-${index}-${Date.now()}`, // Ensure unique IDs
-          name: item,
-          quantity: '1',
-          isChecked: false
-        }));
+        const shoppingList: ShoppingListItem[] = shoppingListStrings.map((itemString, index) => {
+          const parsedItem = parseItemString(itemString);
+          return {
+            id: `shopping-${index}-${Date.now()}`, // Ensure unique IDs
+            name: parsedItem.name,
+            quantity: parsedItem.quantity,
+            unit: parsedItem.unit,
+            isChecked: false
+          };
+        });
         
         const updatedWeekData = {
           ...currentWeekData,
@@ -368,15 +398,18 @@ export const ChatFlowContainer: React.FC = () => {
     await generateShoppingListWithRetry();
   };
 
-  const handleUpdateShoppingQuantity = (itemId: string, newQuantity: string) => {
+  const handleUpdateShoppingQuantity = (itemId: string, newQuantity: number, newUnit?: string) => {
     if (!currentWeekData?.shoppingList) return;
     
-    // Parse quantity as number and validate
-    const parsedQuantity = parseFloat(newQuantity) || 1;
-    const validQuantity = Math.max(0, parsedQuantity).toString();
+    // Validate quantity
+    const validQuantity = Math.max(0, newQuantity);
     
     const updatedShoppingList = currentWeekData.shoppingList.map(item =>
-      item.id === itemId ? { ...item, quantity: validQuantity } : item
+      item.id === itemId ? { 
+        ...item, 
+        quantity: validQuantity,
+        unit: newUnit || item.unit
+      } : item
     );
     
     setCurrentWeekData({
