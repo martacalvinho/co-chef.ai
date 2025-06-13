@@ -4,6 +4,7 @@ import { MenuLibrary } from './components/menus/MenuLibrary';
 import { ShoppingList } from './components/shopping/ShoppingList';
 import { GlobalModals } from './components/modals/GlobalModals';
 import { Homepage } from './components/homepage/Homepage';
+import { LandingPage } from './components/landing/LandingPage';
 import { useAppStore } from './store';
 
 function App() {
@@ -12,7 +13,7 @@ function App() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'homepage':
-        return <Homepage />;
+        return <LandingPage />;
       case 'chat':
         return <ChatFlowContainer />;
       case 'menus':
@@ -20,7 +21,7 @@ function App() {
       case 'shopping':
         return <ShoppingList />;
       default:
-        return <Homepage />;
+        return <LandingPage />;
     }
   };
 

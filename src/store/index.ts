@@ -139,7 +139,7 @@ export const useAppStore = create<AppState>((set, get) => {
   checkAndEndWeek();
 
   return {
-    currentView: 'homepage', // Changed to homepage as default
+    currentView: 'homepage', // Start with the landing page
     savedMenus: [
       {
         id: '1',
